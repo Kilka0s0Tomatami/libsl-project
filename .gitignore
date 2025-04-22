@@ -1,3 +1,6 @@
 cmake-build-*
 output
+generated
+cmake-build-debug-mingw
+cmake-build-release-mingw
 .idea

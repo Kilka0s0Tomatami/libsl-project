@@ -1,4 +1,10 @@
 #pragma once
-#include "dll_modifier.h"
 
-DLL_MODIFIER void lib_print();
+#include <string>
+#include <memory>
+
+namespace LibSL {
+    bool parseFromFile(const std::string& filePath);
+    bool parseFromString(const std::string& input);
+    std::string getParseTree();
+}
