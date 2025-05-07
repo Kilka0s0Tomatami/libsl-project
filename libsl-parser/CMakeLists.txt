@@ -7,6 +7,11 @@
 cmake_minimum_required(VERSION 3.24)
 project(libsl-parser LANGUAGES CXX)
 
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND WIN32)
+    message(STATUS "Using Clang on Windows")
+    add_compile_options(-stdlib=libstdc++)
+    add_link_options(-stdlib=libstdc++)
+endif()
 
 
 
