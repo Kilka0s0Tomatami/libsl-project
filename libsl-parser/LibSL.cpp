@@ -2,57 +2,50 @@
 #include "LibSLParser.h"
 #include "LibSLLexer.h"
 #include "antlr4-runtime.h"
-
 #include <fstream>
-#include <iostream>
-#include <sstream>
 #include <memory>
-#include <utility>  // Для std::move
 
 using namespace antlr4;
 
 namespace {
-    struct ParseContext {
-        ANTLRInputStream input;
-        LibSLLexer lexer;
-        CommonTokenStream tokens;
-        LibSLParser parser;
-        std::unique_ptr<LibSLParser::FileContext> parseTree;
-
-        ParseContext(const std::string& inputStr)
-                : input(inputStr),
-                  lexer(&input),
-                  tokens(&lexer),
-                  parser(&tokens) {
-            tokens.fill();
-        }
-    };
-
-    std::unique_ptr<ParseContext> currentContext;
+    std::unique_ptr<ANTLRInputStream> input;
+    std::unique_ptr<LibSLLexer> lexer;
+    std::unique_ptr<CommonTokenStream> tokens;
+    std::unique_ptr<LibSLParser> parser;
+    LibSLParser::FileContext* parseTree = nullptr;
 }
 
 bool LibSL::parseFromFile(const std::string& filePath) {
+    cleanup(); // Сначала очищаем предыдущий парсер
+
     std::ifstream file(filePath);
-    if (!file) {
-        std::cerr << "Failed to open file: " << filePath << std::endl;
-        return false;
-    }
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    return parseFromString(buffer.str());
-}
+    if (!file) return false;
 
-bool LibSL::parseFromString(const std::string& input) {
+    std::string content((std::istreambuf_iterator<char>(file)),
+                        std::istreambuf_iterator<char>());
+
     try {
-        currentContext = std::make_unique<ParseContext>(input);
-        // Используем reset для присвоения нового значения unique_ptr
-        currentContext->parseTree.reset(currentContext->parser.file());
-        std::cout << "Parsed successfully from string!" << std::endl;
+        input = std::make_unique<ANTLRInputStream>(content);
+        lexer = std::make_unique<LibSLLexer>(input.get());
+        tokens = std::make_unique<CommonTokenStream>(lexer.get());
+        parser = std::make_unique<LibSLParser>(tokens.get());
+
+        tokens->fill();
+        parseTree = parser->file();
         return true;
-    } catch (const std::exception& e) {
-        std::cerr << "Parsing error: " << e.what() << std::endl;
-        currentContext.reset();
+    } catch (...) {
+        cleanup();
         return false;
     }
 }
 
+void LibSL::cleanup() {
+    if (parseTree) {
+        delete parseTree;
+        parseTree = nullptr;
+    }
+    parser.reset();
+    tokens.reset();
+    lexer.reset();
+    input.reset();
+}
